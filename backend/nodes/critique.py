@@ -7,8 +7,9 @@ from groq import Groq
 
 load_dotenv()
 
-client = Groq(api_key=os.environ["GROQ_API_KEY"])
-model = "llama-3.1-8b-instant"
+# need more headroom than the default 2 retries for our call volume.
+client = Groq(api_key=os.environ["GROQ_API_KEY"], max_retries=5)
+model = "openai/gpt-oss-20b"
 
 PROMPT_TEMPLATE = (
     "Claim to check: {claim}\n\n"
@@ -42,6 +43,9 @@ def _sample_source_verdicts(claim: str, sources: list[dict]) -> list[str] | None
 
 
 def critique_claim(claim: str, sources: list[dict]) -> dict:
+    if not sources:
+        return {"claim": claim, "verdict": "UNVERIFIED", "supporting_count": 0, "source_verdicts": []}
+
     # self-consistency: sample the same judgment multiple independent
     # times and take a majority vote per source, instead of trusting one
     # noisy call -- a single small-model sample flipped a fabricated claim

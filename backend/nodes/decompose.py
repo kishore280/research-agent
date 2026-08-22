@@ -6,8 +6,8 @@ from groq import Groq
 
 load_dotenv()
 
-client = Groq(api_key=os.environ["GROQ_API_KEY"])
-model = "llama-3.1-8b-instant"
+client = Groq(api_key=os.environ["GROQ_API_KEY"], max_retries=5)
+model = "openai/gpt-oss-20b"
 
 PROMPT_TEMPLATE = (
     "Given the following research findings about a company, extract a list "
@@ -20,9 +20,12 @@ PROMPT_TEMPLATE = (
     "JSON:"
 )
 
+# ilana error adiku
+MAX_CONTENT_CHARS_PER_FINDING = 500
+
 
 def decompose_into_claims(findings: list[dict]) -> list[str]:
-    findings_text = " ".join(f["content"] for f in findings)
+    findings_text = " ".join(f["content"][:MAX_CONTENT_CHARS_PER_FINDING] for f in findings)
     prompt = PROMPT_TEMPLATE.format(findings=findings_text)
     response = client.chat.completions.create(
         model=model,

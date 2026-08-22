@@ -1,0 +1,35 @@
+{
+  "company": "Anthropic",
+  "claims": [
+    {
+      "claim": "Anthropic was founded in 2021.",
+      "verdict": "VERIFIED",
+      "supporting_count": 5,
+      "attempts": 0
+    },
+    {
+      "claim": "Anthropic was founded by siblings Dario Amodei and Daniela Amodei.",
+      "verdict": "VERIFIED",
+      "supporting_count": 5,
+      "attempts": 0
+    },
+    {
+      "claim": "Anthropic was incorporated in February\u202f2021 by eleven former OpenAI employees.",
+      "verdict": "VERIFIED",
+      "supporting_count": 2,
+      "attempts": 0
+    },
+    {
+      "claim": "Dario Amodei served as former VP of Research at OpenAI before founding Anthropic.",
+      "verdict": "VERIFIED",
+      "supporting_count": 2,
+      "attempts": 0
+    },
+    {
+      "claim": "Daniela Amodei served as former VP of Safety & Policy at OpenAI before founding Anthropic.",
+      "verdict": "VERIFIED",
+      "supporting_count": 2,
+      "attempts": 0
+    }
+  ]
+}
