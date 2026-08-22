@@ -1,5 +1,4 @@
-import operator
-from typing import Annotated, TypedDict
+from typing import Annotated, Callable, TypedDict
 
 import numpy as np
 from langgraph.graph import END, START, StateGraph
@@ -43,6 +42,32 @@ DUPLICATE_SIMILARITY_THRESHOLD = 0.6
 # existing claims doesn't re-encode strings we've already embedded once
 _claim_embedding_cache: dict[str, np.ndarray] = {}
 
+# plain operator.add just concatenates -- if LangGraph retries a node after
+# a crash (a real, documented risk: langchain-ai/langgraph#8039), the same
+# return value can get appended twice. These reducers dedupe by a stable
+# key on every merge, so applying the same write a second time is a no-op
+# instead of a duplicate. Cheap since these lists stay small (a handful of
+# findings/claims per run), so re-scanning the combined list each merge
+# isn't a real cost here.
+def _dedupe_by_key(key: Callable) -> Callable[[list, list], list]:
+    def reducer(existing: list, new: list) -> list:
+        combined = existing + new
+        seen = set()
+        deduped = []
+        for item in combined:
+            k = key(item)
+            if k in seen:
+                continue
+            seen.add(k)
+            deduped.append(item)
+        return deduped
+    return reducer
+
+
+_dedupe_findings = _dedupe_by_key(lambda finding: finding["url"])
+_dedupe_claims = _dedupe_by_key(lambda claim: claim)
+_dedupe_claim_results = _dedupe_by_key(lambda result: result["claim"])
+
 RESEARCH_NODE_BY_AREA = {
     "overview": "research_overview",
     "industry": "research_industry",
@@ -60,17 +85,18 @@ class ResearchState(TypedDict):
     company_name: str
     focus_area: str | None
     # each research node writes only its own category, but on a follow-up
-    # run the node returns just the freshly fetched results and the add
-    # reducer appends them onto the checkpointed list from the prior run
-    overview: Annotated[list[dict], operator.add]
-    industry: Annotated[list[dict], operator.add]
-    financials: Annotated[list[dict], operator.add]
-    news: Annotated[list[dict], operator.add]
+    # run the node returns just the freshly fetched results and the reducer
+    # merges them onto the checkpointed list from the prior run, deduping
+    # by URL so a retried node can't double-append the same finding
+    overview: Annotated[list[dict], _dedupe_findings]
+    industry: Annotated[list[dict], _dedupe_findings]
+    financials: Annotated[list[dict], _dedupe_findings]
+    news: Annotated[list[dict], _dedupe_findings]
     all_findings: list[dict]
     new_findings: list[dict]
-    claims: Annotated[list[str], operator.add]
+    claims: Annotated[list[str], _dedupe_claims]
     new_claims: list[str]
-    claim_results: Annotated[list[dict], operator.add]
+    claim_results: Annotated[list[dict], _dedupe_claim_results]
     report: dict
 
 
@@ -167,6 +193,12 @@ def route_to_critique(state: ResearchState):
     # invokes, and recommends Send() for exactly this "N independent items"
     # shape instead. Each Send runs critique_one_claim_node as its own
     # parallel branch; claim_results' add reducer collects all of them.
+    # "report" is reachable two ways below (direct here, or via
+    # critique_one_claim), but the two are mutually exclusive within one
+    # run -- this router returns EITHER "report" OR the Send list, never
+    # both -- so this isn't the documented double-execution bug where a
+    # node gets both a normal edge and a conditional edge from the same
+    # source (langchain-ai/langgraph#6166)
     claims = state["new_claims"]
     if not claims:
         return "report"
