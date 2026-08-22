@@ -1,0 +1,206 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.3, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\mahes\Desktop\ai-learning\research-agent\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\mahes\Desktop\ai-learning\research-agent
+plugins: anyio-4.14.2, langsmith-0.10.17
+collecting ... collected 1 item
+
+tests/test_followup.py::test_followup_scoped_to_financials_appends_without_reverifying FAILED [100%]
+
+================================== FAILURES ===================================
+_______ test_followup_scoped_to_financials_appends_without_reverifying ________
+
+    def test_followup_scoped_to_financials_appends_without_reverifying():
+        if os.path.exists(DB_PATH):
+            os.remove(DB_PATH)
+    
+        config = {"configurable": {"thread_id": "anthropic-followup-test"}}
+    
+        with SqliteSaver.from_conn_string(DB_PATH) as checkpointer:
+            graph = build_research_graph(checkpointer=checkpointer)
+>           result1 = graph.invoke(INITIAL_STATE, config)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_followup.py:35: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+venv\Lib\site-packages\langgraph\pregel\main.py:3913: in invoke
+    for chunk in self.stream(
+venv\Lib\site-packages\langgraph\pregel\main.py:2967: in stream
+    for _ in runner.tick(
+venv\Lib\site-packages\langgraph\pregel\_runner.py:344: in tick
+    _panic_or_proceed(
+venv\Lib\site-packages\langgraph\pregel\_runner.py:687: in _panic_or_proceed
+    raise exc
+venv\Lib\site-packages\langgraph\pregel\_executor.py:80: in done
+    task.result()
+C:\Python313\Lib\concurrent\futures\_base.py:449: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+C:\Python313\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+C:\Python313\Lib\concurrent\futures\thread.py:59: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\langgraph\pregel\_retry.py:617: in run_with_retry
+    return task.proc.invoke(task.input, config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\langgraph\_internal\_runnable.py:684: in invoke
+    input = context.run(step.invoke, input, config, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\langgraph\_internal\_runnable.py:426: in invoke
+    ret = self.func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend\graph.py:209: in critique_one_claim_node
+    result = _claim_graph.invoke({
+venv\Lib\site-packages\langgraph\pregel\main.py:3913: in invoke
+    for chunk in self.stream(
+venv\Lib\site-packages\langgraph\pregel\main.py:2967: in stream
+    for _ in runner.tick(
+venv\Lib\site-packages\langgraph\pregel\_runner.py:207: in tick
+    run_with_retry(
+venv\Lib\site-packages\langgraph\pregel\_retry.py:617: in run_with_retry
+    return task.proc.invoke(task.input, config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\langgraph\_internal\_runnable.py:684: in invoke
+    input = context.run(step.invoke, input, config, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\langgraph\_internal\_runnable.py:426: in invoke
+    ret = self.func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend\claim_loop.py:20: in critique_node
+    critique_result = critique_claim(state["claim"], state["sources"])
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend\nodes\critique.py:53: in critique_claim
+    samples = [_sample_source_verdicts(claim, sources) for _ in range(SELF_CONSISTENCY_SAMPLES)]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend\nodes\critique.py:29: in _sample_source_verdicts
+    response = client.chat.completions.create(
+venv\Lib\site-packages\groq\resources\chat\completions.py:462: in create
+    return self._post(
+venv\Lib\site-packages\groq\_base_client.py:1284: in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <groq.Groq object at 0x000002198AC1AF90>
+cast_to = <class 'groq.types.chat.chat_completion.ChatCompletion'>
+options = FinalRequestOptions(method='post', url='/openai/v1/chat/completions', params={}, headers=NOT_GIVEN, max_retries=NOT_GI...order as listed above.'}], 'model': 'openai/gpt-oss-20b', 'response_format': {'type': 'json_object'}}, extra_json=None)
+stream = False
+stream_cls = groq.Stream[groq.types.chat.chat_completion_chunk.ChatCompletionChunk]
+
+    def request(
+        self,
+        cast_to: Type[ResponseT],
+        options: FinalRequestOptions,
+        *,
+        stream: bool = False,
+        stream_cls: type[_StreamT] | None = None,
+    ) -> ResponseT | _StreamT:
+        cast_to = self._maybe_override_cast_to(cast_to, options)
+    
+        # create a copy of the options we were given so that if the
+        # options are mutated later & we then retry, the retries are
+        # given the original options
+        input_options = model_copy(options)
+        if input_options.idempotency_key is None and input_options.method.lower() != "get":
+            # ensure the idempotency key is reused between requests
+            input_options.idempotency_key = self._idempotency_key()
+    
+        response: httpx.Response | None = None
+        max_retries = input_options.get_max_retries(self.max_retries)
+    
+        retries_taken = 0
+        for retries_taken in range(max_retries + 1):
+            options = model_copy(input_options)
+            options = self._prepare_options(options)
+    
+            remaining_retries = max_retries - retries_taken
+            request = self._build_request(options, retries_taken=retries_taken)
+            self._prepare_request(request)
+    
+            kwargs: HttpxSendArgs = {}
+            if self.custom_auth is not None:
+                kwargs["auth"] = self.custom_auth
+    
+            if options.follow_redirects is not None:
+                kwargs["follow_redirects"] = options.follow_redirects
+    
+            log.debug("Sending HTTP Request: %s %s", request.method, request.url)
+    
+            response = None
+            try:
+                response = self._client.send(
+                    request,
+                    stream=stream or self._should_stream_response_body(request=request),
+                    **kwargs,
+                )
+            except httpx.TimeoutException as err:
+                log.debug("Encountered httpx.TimeoutException", exc_info=True)
+    
+                if remaining_retries > 0:
+                    self._sleep_for_retry(
+                        retries_taken=retries_taken,
+                        max_retries=max_retries,
+                        options=input_options,
+                        response=None,
+                    )
+                    continue
+    
+                log.debug("Raising timeout error")
+                raise APITimeoutError(request=request) from err
+            except Exception as err:
+                log.debug("Encountered Exception", exc_info=True)
+    
+                if remaining_retries > 0:
+                    self._sleep_for_retry(
+                        retries_taken=retries_taken,
+                        max_retries=max_retries,
+                        options=input_options,
+                        response=None,
+                    )
+                    continue
+    
+                log.debug("Raising connection error")
+                raise APIConnectionError(request=request) from err
+    
+            log.debug(
+                'HTTP Response: %s %s "%i %s" %s',
+                request.method,
+                request.url,
+                response.status_code,
+                response.reason_phrase,
+                response.headers,
+            )
+    
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as err:  # thrown on 4xx and 5xx status code
+                log.debug("Encountered httpx.HTTPStatusError", exc_info=True)
+    
+                if remaining_retries > 0 and self._should_retry(err.response):
+                    err.response.close()
+                    self._sleep_for_retry(
+                        retries_taken=retries_taken,
+                        max_retries=max_retries,
+                        options=input_options,
+                        response=response,
+                    )
+                    continue
+    
+                # If the response is streamed then we need to explicitly read the response
+                # to completion before attempting to access the response text.
+                if not err.response.is_closed:
+                    err.response.read()
+    
+                log.debug("Re-raising status error")
+>               raise self._make_status_error_from_response(err.response) from None
+E               groq.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01jszx8rmpekqtwmptpxzsgr2h` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 197729, Requested 6143. Please try again in 27m52.704s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+E               During task with name 'critique' and id '97c285d6-4c75-a64c-1efa-a9160c25060e'
+E               During task with name 'critique_one_claim' and id 'df19fe1f-191f-e550-bcc6-015ebb22b86d'
+
+venv\Lib\site-packages\groq\_base_client.py:1071: RateLimitError
+---------------------------- Captured stdout call -----------------------------
+[decompose] 23 new claims found, capping to 5 for this run
+=========================== short test summary info ===========================
+FAILED tests/test_followup.py::test_followup_scoped_to_financials_appends_without_reverifying
+============================= 1 failed in 20.79s ==============================
